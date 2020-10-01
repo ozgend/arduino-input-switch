@@ -2,5 +2,5 @@
     "programmer": "Arduino as ISP",
     "board": "arduino:avr:uno",
     "port": "COM5",
-    "sketch": "audio_relay_switch.ino"
+    "sketch": "audio-input-switch.ino"
 }
