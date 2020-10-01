@@ -1,12 +1,14 @@
+#include <Nokia_LCD.h>
+
 #define BTN_IN_1 2
 #define BTN_IN_2 3
 #define BTN_IN_3 4
 #define BTN_IN_4 5
 
-#define CH_SWITCH_1 8
-#define CH_SWITCH_2 9
-#define CH_SWITCH_3 10
-#define CH_SWITCH_4 11
+#define CH_SWITCH_1 6
+#define CH_SWITCH_2 7
+#define CH_SWITCH_3 8
+#define CH_SWITCH_4 9
 
 #define CHANNEL_SIZE 4
 #define BTN_PIN_ZERO_OFFSET 2
@@ -21,10 +23,23 @@ int channelStates[CHANNEL_SIZE];
 int activeChannel = -1;
 unsigned long lastInteractionTime = -1;
 
+#define LCD_CLK 12
+#define LCD_DIN 11
+#define LCD_DC 10
+#define LCD_CE 13
+#define LCD_RST 1
+
+Nokia_LCD lcd(LCD_CLK, LCD_DIN, LCD_DC, LCD_CE, LCD_RST);
+
 void setup()
 {
   Serial.begin(9600);
-  Serial.println("audio relay start");
+  Serial.println("AIS start");
+
+  lcd.begin();
+  lcd.setContrast(60);
+  lcd.clear(true);
+  lcd.setInverted(true);
 
   for (int i = 0; i < CHANNEL_SIZE; i++)
   {
@@ -33,6 +48,13 @@ void setup()
   }
 
   toggleActiveChannel(-9);
+  displayPrint(1, " AIS Started");
+}
+
+void displayPrint(int row, char text[])
+{
+  lcd.setCursor(0, row);
+  lcd.print(text);
 }
 
 void resetChannelStates()
@@ -50,9 +72,12 @@ void setChannelState()
 
 void toggleActiveChannel(int channel)
 {
+  lcd.clear();
+
   if (activeChannel == channel)
   {
-    channelStates[channel] = channelStates[channel] == HIGH ? LOW : HIGH;
+    channelStates[channel] = channelStates[channel] == LOW ? HIGH : LOW;
+    displayPrint(4, channelStates[channel] == HIGH ? " " : " mute");
   }
   else
   {
@@ -63,6 +88,9 @@ void toggleActiveChannel(int channel)
   setChannelState();
 
   activeChannel = channel;
+
+  lcd.clear();
+  displayPrint(1, "Input: " + activeChannel);
 
   Serial.print("active channel set to: ");
   Serial.print(activeChannel);
