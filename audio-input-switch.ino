@@ -10,6 +10,7 @@
 
 #define CHANNEL_SIZE 4
 #define BTN_PIN_ZERO_OFFSET 2
+#define INPUT_DELAY_MSEC 500
 
 const int defaultChannelStates[CHANNEL_SIZE] = {HIGH, HIGH, HIGH, HIGH};
 
@@ -18,6 +19,7 @@ int relayPins[CHANNEL_SIZE] = {CH_SWITCH_1, CH_SWITCH_2, CH_SWITCH_3, CH_SWITCH_
 int channelStates[CHANNEL_SIZE];
 
 int activeChannel = -1;
+unsigned long lastInteractionTime = -1;
 
 void setup()
 {
@@ -67,26 +69,35 @@ void toggleActiveChannel(int channel)
   Serial.print("\n");
 }
 
-bool checkButton(int btnPin)
+void checkButton(int btnPin)
 {
   int state = digitalRead(btnPin);
   int channel = 0;
 
   if (state == LOW)
   {
+    lastInteractionTime = millis();
     toggleActiveChannel(btnPin - BTN_PIN_ZERO_OFFSET);
-    return true;
   }
-
-  return false;
 }
 
-void loop()
+void checkButtons()
 {
   for (int b = 0; b < CHANNEL_SIZE; b++)
   {
     checkButton(buttonPins[b]);
   }
+}
 
-  delay(100);
+void processEvent()
+{
+  while (millis() - lastInteractionTime > INPUT_DELAY_MSEC)
+  {
+    checkButtons();
+  }
+}
+
+void loop()
+{
+  processEvent();
 }
