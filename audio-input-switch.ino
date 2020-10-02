@@ -23,23 +23,21 @@ int channelStates[CHANNEL_SIZE];
 int activeChannel = -1;
 unsigned long lastInteractionTime = -1;
 
-#define LCD_CLK 12
-#define LCD_DIN 11
-#define LCD_DC 10
-#define LCD_CE 13
+#define LCD_CLK 13
+#define LCD_DIN 12
+#define LCD_DC 11
+#define LCD_CE 10
 #define LCD_RST 1
 
 Nokia_LCD lcd(LCD_CLK, LCD_DIN, LCD_DC, LCD_CE, LCD_RST);
 
 void setup()
 {
-  Serial.begin(9600);
-  Serial.println("AIS start");
-
   lcd.begin();
-  lcd.setContrast(60);
-  lcd.clear(true);
-  lcd.setInverted(true);
+  lcd.setInverted(false);
+  lcd.setContrast(11);
+  lcd.clear(false);
+  displayPrint(5, " AIS init");
 
   for (int i = 0; i < CHANNEL_SIZE; i++)
   {
@@ -48,10 +46,11 @@ void setup()
   }
 
   toggleActiveChannel(-9);
-  displayPrint(1, " AIS Started");
+  displayPrint(0, "AIS");
+  displayPrint(5, "no input set");
 }
 
-void displayPrint(int row, char text[])
+void displayPrint(int row, const char *text)
 {
   lcd.setCursor(0, row);
   lcd.print(text);
@@ -72,12 +71,13 @@ void setChannelState()
 
 void toggleActiveChannel(int channel)
 {
-  lcd.clear();
+  displayPrint(5, "             ");
+  displayPrint(4, "    +    ");
 
   if (activeChannel == channel)
   {
     channelStates[channel] = channelStates[channel] == LOW ? HIGH : LOW;
-    displayPrint(4, channelStates[channel] == HIGH ? " " : " mute");
+    displayPrint(4, channelStates[channel] == LOW ? "    +    " : "< mute >");
   }
   else
   {
@@ -89,12 +89,33 @@ void toggleActiveChannel(int channel)
 
   activeChannel = channel;
 
-  lcd.clear();
-  displayPrint(1, "Input: " + activeChannel);
+  displayPrint(3, getChannelAlias(channel));
+}
 
-  Serial.print("active channel set to: ");
-  Serial.print(activeChannel);
-  Serial.print("\n");
+char *getChannelAlias(int channel)
+{
+  char *channelAlias = " X ";
+  switch (channel)
+  {
+  case 0:
+    channelAlias = "Input [A]";
+    break;
+  case 1:
+    channelAlias = "Input [B]";
+    break;
+  case 2:
+    channelAlias = "Input [C]";
+    break;
+  case 3:
+    channelAlias = "Input [D]";
+    break;
+  case 4:
+    channelAlias = "Input [BT]";
+    break;
+  default:
+    channelAlias = "channel x";
+  }
+  return channelAlias;
 }
 
 void checkButton(int btnPin)
