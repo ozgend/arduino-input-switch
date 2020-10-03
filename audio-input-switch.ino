@@ -1,72 +1,82 @@
+#include <Nokia_LCD.h>
+
 #define BTN_IN_1 2
 #define BTN_IN_2 3
 #define BTN_IN_3 4
 #define BTN_IN_4 5
 
-#define CH_SWITCH_1 8
-#define CH_SWITCH_2 9
-#define CH_SWITCH_3 10
-#define CH_SWITCH_4 11
+#define CH_SWITCH_1 6
+#define CH_SWITCH_2 7
+#define CH_SWITCH_3 8
+#define CH_SWITCH_4 9
 
 #define CHANNEL_SIZE 4
 #define BTN_PIN_ZERO_OFFSET 2
 #define INPUT_DELAY_MSEC 500
 
-const int defaultChannelStates[CHANNEL_SIZE] = {HIGH, HIGH, HIGH, HIGH};
+#define LCD_CLK 13
+#define LCD_DIN 12
+#define LCD_DC 11
+#define LCD_CE 10
+#define LCD_RST 1
+#define LCD_TEXT_CLEAR_LINE "              "
+#define LCD_CHAR_WIDTH 6
 
-int buttonPins[CHANNEL_SIZE] = {BTN_IN_1, BTN_IN_2, BTN_IN_3, BTN_IN_4};
-int relayPins[CHANNEL_SIZE] = {CH_SWITCH_1, CH_SWITCH_2, CH_SWITCH_3, CH_SWITCH_4};
+const int buttonPins[CHANNEL_SIZE] = {BTN_IN_1, BTN_IN_2, BTN_IN_3, BTN_IN_4};
+const int relayPins[CHANNEL_SIZE] = {CH_SWITCH_1, CH_SWITCH_2, CH_SWITCH_3, CH_SWITCH_4};
+
 int channelStates[CHANNEL_SIZE];
-
-int activeChannel = -1;
 unsigned long lastInteractionTime = -1;
+char txtChannelStatusBuffer[4];
 
-void setup()
+Nokia_LCD lcd(LCD_CLK, LCD_DIN, LCD_DC, LCD_CE, LCD_RST);
+
+void updateDisplay()
 {
-  Serial.begin(9600);
-  Serial.println("audio relay start");
+  lcd.setCursor(0 * LCD_CHAR_WIDTH, 3);
+  lcd.print(" ");
 
-  for (int i = 0; i < CHANNEL_SIZE; i++)
+  for (int c = 0; c < CHANNEL_SIZE; c++)
   {
-    pinMode(buttonPins[i], INPUT_PULLUP);
-    pinMode(relayPins[i], OUTPUT);
+    lcd.setCursor(c * LCD_CHAR_WIDTH, 3);
+    if (channelStates[c] == LOW)
+    {
+      lcd.setInverted(true);
+    }
+    else
+    {
+      lcd.setInverted(false);
+    }
+
+    lcd.setCursor(((c * 3) + 1) * LCD_CHAR_WIDTH, 3); //6
+    snprintf(txtChannelStatusBuffer, 4, " %d ", c + 1);
+    lcd.print(txtChannelStatusBuffer);
   }
 
-  toggleActiveChannel(-9);
+  lcd.setInverted(false);
+  lcd.setCursor(13 * LCD_CHAR_WIDTH, 3);
+  lcd.print(" ");
+
+  lcd.setCursor(0, 5);
+  lcd.print(LCD_TEXT_CLEAR_LINE);
 }
 
-void resetChannelStates()
-{
-  memcpy(channelStates, defaultChannelStates, sizeof(channelStates));
-}
-
-void setChannelState()
+void writeChannelStates(bool reset)
 {
   for (int c = 0; c < CHANNEL_SIZE; c++)
   {
+    if (reset)
+    {
+      channelStates[c] = HIGH;
+    }
     digitalWrite(relayPins[c], channelStates[c]);
   }
 }
 
-void toggleActiveChannel(int channel)
+void toggleChannel(int channel)
 {
-  if (activeChannel == channel)
-  {
-    channelStates[channel] = channelStates[channel] == HIGH ? LOW : HIGH;
-  }
-  else
-  {
-    resetChannelStates();
-    channelStates[channel] = LOW;
-  }
-
-  setChannelState();
-
-  activeChannel = channel;
-
-  Serial.print("active channel set to: ");
-  Serial.print(activeChannel);
-  Serial.print("\n");
+  channelStates[channel] = channelStates[channel] == LOW ? HIGH : LOW;
+  writeChannelStates(false);
 }
 
 void checkButton(int btnPin)
@@ -77,11 +87,11 @@ void checkButton(int btnPin)
   if (state == LOW)
   {
     lastInteractionTime = millis();
-    toggleActiveChannel(btnPin - BTN_PIN_ZERO_OFFSET);
+    toggleChannel(btnPin - BTN_PIN_ZERO_OFFSET);
   }
 }
 
-void checkButtons()
+void checkInputs()
 {
   for (int b = 0; b < CHANNEL_SIZE; b++)
   {
@@ -89,15 +99,37 @@ void checkButtons()
   }
 }
 
-void processEvent()
+void setup()
 {
-  while (millis() - lastInteractionTime > INPUT_DELAY_MSEC)
+  for (int i = 0; i < CHANNEL_SIZE; i++)
   {
-    checkButtons();
+    pinMode(buttonPins[i], INPUT_PULLUP);
+    pinMode(relayPins[i], OUTPUT);
   }
+
+  writeChannelStates(true);
+
+  lcd.begin();
+  lcd.setContrast(11);
+
+  lcd.setInverted(true);
+  lcd.clear(true);
+  lcd.setCursor(0, 1);
+  lcd.print(" initializing ");
+
+  delay(500);
+
+  lcd.clear(false);
+  lcd.setCursor(0, 0);
+  lcd.print(">  AxI      >>");
+  lcd.setInverted(false);
 }
 
 void loop()
 {
-  processEvent();
+  while (millis() - lastInteractionTime > INPUT_DELAY_MSEC)
+  {
+    checkInputs();
+    updateDisplay();
+  }
 }
