@@ -14,108 +14,69 @@
 #define BTN_PIN_ZERO_OFFSET 2
 #define INPUT_DELAY_MSEC 500
 
-const int defaultChannelStates[CHANNEL_SIZE] = {HIGH, HIGH, HIGH, HIGH};
-
-int buttonPins[CHANNEL_SIZE] = {BTN_IN_1, BTN_IN_2, BTN_IN_3, BTN_IN_4};
-int relayPins[CHANNEL_SIZE] = {CH_SWITCH_1, CH_SWITCH_2, CH_SWITCH_3, CH_SWITCH_4};
-int channelStates[CHANNEL_SIZE];
-
-int activeChannel = -1;
-unsigned long lastInteractionTime = -1;
-
 #define LCD_CLK 13
 #define LCD_DIN 12
 #define LCD_DC 11
 #define LCD_CE 10
 #define LCD_RST 1
+#define LCD_TEXT_CLEAR_LINE "              "
+#define LCD_CHAR_WIDTH 6
+
+const int buttonPins[CHANNEL_SIZE] = {BTN_IN_1, BTN_IN_2, BTN_IN_3, BTN_IN_4};
+const int relayPins[CHANNEL_SIZE] = {CH_SWITCH_1, CH_SWITCH_2, CH_SWITCH_3, CH_SWITCH_4};
+
+int channelStates[CHANNEL_SIZE];
+unsigned long lastInteractionTime = -1;
+char txtChannelStatusBuffer[4];
 
 Nokia_LCD lcd(LCD_CLK, LCD_DIN, LCD_DC, LCD_CE, LCD_RST);
 
-void setup()
+void updateDisplay()
 {
-  lcd.begin();
-  lcd.setInverted(false);
-  lcd.setContrast(11);
-  lcd.clear(false);
-  displayPrint(5, " AIS init");
+  lcd.setCursor(0 * LCD_CHAR_WIDTH, 3);
+  lcd.print(" ");
 
-  for (int i = 0; i < CHANNEL_SIZE; i++)
+  for (int c = 0; c < CHANNEL_SIZE; c++)
   {
-    pinMode(buttonPins[i], INPUT_PULLUP);
-    pinMode(relayPins[i], OUTPUT);
+    lcd.setCursor(c * LCD_CHAR_WIDTH, 3);
+    if (channelStates[c] == LOW)
+    {
+      lcd.setInverted(true);
+    }
+    else
+    {
+      lcd.setInverted(false);
+    }
+
+    lcd.setCursor(((c * 3) + 1) * LCD_CHAR_WIDTH, 3); //6
+    snprintf(txtChannelStatusBuffer, 4, " %d ", c + 1);
+    lcd.print(txtChannelStatusBuffer);
   }
 
-  toggleActiveChannel(-9);
-  displayPrint(0, "AIS");
-  displayPrint(5, "no input set");
+  lcd.setInverted(false);
+  lcd.setCursor(13 * LCD_CHAR_WIDTH, 3);
+  lcd.print(" ");
+
+  lcd.setCursor(0, 5);
+  lcd.print(LCD_TEXT_CLEAR_LINE);
 }
 
-void displayPrint(int row, const char *text)
-{
-  lcd.setCursor(0, row);
-  lcd.print(text);
-}
-
-void resetChannelStates()
-{
-  memcpy(channelStates, defaultChannelStates, sizeof(channelStates));
-}
-
-void setChannelState()
+void writeChannelStates(bool reset)
 {
   for (int c = 0; c < CHANNEL_SIZE; c++)
   {
+    if (reset)
+    {
+      channelStates[c] = HIGH;
+    }
     digitalWrite(relayPins[c], channelStates[c]);
   }
 }
 
-void toggleActiveChannel(int channel)
+void toggleChannel(int channel)
 {
-  displayPrint(5, "             ");
-  displayPrint(4, "    +    ");
-
-  if (activeChannel == channel)
-  {
-    channelStates[channel] = channelStates[channel] == LOW ? HIGH : LOW;
-    displayPrint(4, channelStates[channel] == LOW ? "    +    " : "< mute >");
-  }
-  else
-  {
-    resetChannelStates();
-    channelStates[channel] = LOW;
-  }
-
-  setChannelState();
-
-  activeChannel = channel;
-
-  displayPrint(3, getChannelAlias(channel));
-}
-
-char *getChannelAlias(int channel)
-{
-  char *channelAlias = " X ";
-  switch (channel)
-  {
-  case 0:
-    channelAlias = "Input [A]";
-    break;
-  case 1:
-    channelAlias = "Input [B]";
-    break;
-  case 2:
-    channelAlias = "Input [C]";
-    break;
-  case 3:
-    channelAlias = "Input [D]";
-    break;
-  case 4:
-    channelAlias = "Input [BT]";
-    break;
-  default:
-    channelAlias = "channel x";
-  }
-  return channelAlias;
+  channelStates[channel] = channelStates[channel] == LOW ? HIGH : LOW;
+  writeChannelStates(false);
 }
 
 void checkButton(int btnPin)
@@ -126,7 +87,7 @@ void checkButton(int btnPin)
   if (state == LOW)
   {
     lastInteractionTime = millis();
-    toggleActiveChannel(btnPin - BTN_PIN_ZERO_OFFSET);
+    toggleChannel(btnPin - BTN_PIN_ZERO_OFFSET);
   }
 }
 
@@ -138,15 +99,37 @@ void checkButtons()
   }
 }
 
-void processEvent()
+void setup()
 {
-  while (millis() - lastInteractionTime > INPUT_DELAY_MSEC)
+  for (int i = 0; i < CHANNEL_SIZE; i++)
   {
-    checkButtons();
+    pinMode(buttonPins[i], INPUT_PULLUP);
+    pinMode(relayPins[i], OUTPUT);
   }
+
+  writeChannelStates(true);
+
+  lcd.begin();
+  lcd.setContrast(11);
+
+  lcd.setInverted(true);
+  lcd.clear(true);
+  lcd.setCursor(0, 1);
+  lcd.print(" initializing ");
+
+  delay(500);
+
+  lcd.clear(false);
+  lcd.setCursor(0, 0);
+  lcd.print(">  AxI      >>");
+  lcd.setInverted(false);
 }
 
 void loop()
 {
-  processEvent();
+  while (millis() - lastInteractionTime > INPUT_DELAY_MSEC)
+  {
+    checkButtons();
+    updateDisplay();
+  }
 }
