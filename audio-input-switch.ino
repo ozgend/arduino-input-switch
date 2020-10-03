@@ -20,8 +20,7 @@
 #define LCD_CE 10
 #define LCD_RST 1
 #define LCD_TEXT_CLEAR_LINE "              "
-#define LCD_CHAR_PIXEL_WIDTH 6
-#define LCD_CHAR_DISPLAY_SIZE 14
+#define LCD_CHAR_WIDTH 6
 
 const int buttonPins[CHANNEL_SIZE] = {BTN_IN_1, BTN_IN_2, BTN_IN_3, BTN_IN_4};
 const int relayPins[CHANNEL_SIZE] = {CH_SWITCH_1, CH_SWITCH_2, CH_SWITCH_3, CH_SWITCH_4};
@@ -34,12 +33,12 @@ Nokia_LCD lcd(LCD_CLK, LCD_DIN, LCD_DC, LCD_CE, LCD_RST);
 
 void updateDisplay()
 {
-  lcd.setCursor(0 * LCD_CHAR_PIXEL_WIDTH, 3);
+  lcd.setCursor(0 * LCD_CHAR_WIDTH, 3);
   lcd.print(" ");
 
   for (int c = 0; c < CHANNEL_SIZE; c++)
   {
-    lcd.setCursor(c * LCD_CHAR_PIXEL_WIDTH, 3);
+    lcd.setCursor(c * LCD_CHAR_WIDTH, 3);
     if (channelStates[c] == LOW)
     {
       lcd.setInverted(true);
@@ -49,13 +48,13 @@ void updateDisplay()
       lcd.setInverted(false);
     }
 
-    lcd.setCursor(((c * 3) + 1) * LCD_CHAR_PIXEL_WIDTH, 3); //6
+    lcd.setCursor(((c * 3) + 1) * LCD_CHAR_WIDTH, 3); //6
     snprintf(txtChannelStatusBuffer, 4, " %d ", c + 1);
     lcd.print(txtChannelStatusBuffer);
   }
 
   lcd.setInverted(false);
-  lcd.setCursor(LCD_CHAR_DISPLAY_SIZE - 1 * LCD_CHAR_PIXEL_WIDTH, 3);
+  lcd.setCursor(13 * LCD_CHAR_WIDTH, 3);
   lcd.print(" ");
 
   lcd.setCursor(0, 5);
@@ -92,7 +91,7 @@ void checkButton(int btnPin)
   }
 }
 
-void checkButtons()
+void checkInputs()
 {
   for (int b = 0; b < CHANNEL_SIZE; b++)
   {
@@ -130,7 +129,7 @@ void loop()
 {
   while (millis() - lastInteractionTime > INPUT_DELAY_MSEC)
   {
-    checkButtons();
+    checkInputs();
     updateDisplay();
   }
 }
