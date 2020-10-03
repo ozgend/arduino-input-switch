@@ -48,10 +48,8 @@ void updateDisplay()
       lcd.setTextColor(BLACK, WHITE);
     }
 
-    // lcd.setCursor(((c * 3) + 1) * LCD_CHAR_WIDTH, 20);
-    // snprintf(txtChannelStatusBuffer, 4, " %d ", c + 1)
-    lcd.setCursor((c * 20), 20);
     snprintf(txtChannelStatusBuffer, 4, "%d", c + 1);
+    lcd.setCursor((c * 20) + 2, 22);
     lcd.print(txtChannelStatusBuffer);
   }
 
@@ -107,13 +105,16 @@ void setup()
   writeChannelStates(true);
 
   lcd.begin();
-  lcd.clearDisplay(); 
+  lcd.clearDisplay();
   lcd.setContrast(11);
 
-  lcd.setTextColor(BLACK);
-  lcd.setCursor(0, 1);
-  lcd.setTextSize(2);
-  lcd.println("> AXi <");
+  lcd.fillRect(0, 0, 84, 48, BLACK);
+  lcd.display();
+
+  lcd.setTextColor(WHITE);
+  lcd.setCursor(0, 10);
+  lcd.setTextSize(3);
+  lcd.println(" AXi ");
   lcd.display();
 
   delay(1000);
