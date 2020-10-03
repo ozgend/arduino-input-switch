@@ -1,4 +1,6 @@
-#include <Nokia_LCD.h>
+#include <SPI.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_PCD8544.h>
 
 #define BTN_IN_1 2
 #define BTN_IN_2 3
@@ -29,36 +31,31 @@ int channelStates[CHANNEL_SIZE];
 unsigned long lastInteractionTime = -1;
 char txtChannelStatusBuffer[4];
 
-Nokia_LCD lcd(LCD_CLK, LCD_DIN, LCD_DC, LCD_CE, LCD_RST);
+Adafruit_PCD8544 lcd = Adafruit_PCD8544(LCD_CLK, LCD_DIN, LCD_DC, LCD_CE, LCD_RST);
 
 void updateDisplay()
 {
-  lcd.setCursor(0 * LCD_CHAR_WIDTH, 3);
-  lcd.print(" ");
+  lcd.setTextSize(3);
 
   for (int c = 0; c < CHANNEL_SIZE; c++)
   {
-    lcd.setCursor(c * LCD_CHAR_WIDTH, 3);
     if (channelStates[c] == LOW)
     {
-      lcd.setInverted(true);
+      lcd.setTextColor(WHITE, BLACK);
     }
     else
     {
-      lcd.setInverted(false);
+      lcd.setTextColor(BLACK, WHITE);
     }
 
-    lcd.setCursor(((c * 3) + 1) * LCD_CHAR_WIDTH, 3); //6
-    snprintf(txtChannelStatusBuffer, 4, " %d ", c + 1);
+    // lcd.setCursor(((c * 3) + 1) * LCD_CHAR_WIDTH, 20);
+    // snprintf(txtChannelStatusBuffer, 4, " %d ", c + 1)
+    lcd.setCursor((c * 20), 20);
+    snprintf(txtChannelStatusBuffer, 4, "%d", c + 1);
     lcd.print(txtChannelStatusBuffer);
   }
 
-  lcd.setInverted(false);
-  lcd.setCursor(13 * LCD_CHAR_WIDTH, 3);
-  lcd.print(" ");
-
-  lcd.setCursor(0, 5);
-  lcd.print(LCD_TEXT_CLEAR_LINE);
+  lcd.display();
 }
 
 void writeChannelStates(bool reset)
@@ -110,19 +107,24 @@ void setup()
   writeChannelStates(true);
 
   lcd.begin();
+  lcd.clearDisplay(); 
   lcd.setContrast(11);
 
-  lcd.setInverted(true);
-  lcd.clear(true);
+  lcd.setTextColor(BLACK);
   lcd.setCursor(0, 1);
-  lcd.print(" initializing ");
+  lcd.setTextSize(2);
+  lcd.println("> AXi <");
+  lcd.display();
 
-  delay(500);
+  delay(1000);
 
-  lcd.clear(false);
+  lcd.clearDisplay();
+  lcd.setTextSize(1);
   lcd.setCursor(0, 0);
-  lcd.print(">  AxI      >>");
-  lcd.setInverted(false);
+  lcd.setTextColor(WHITE, BLACK);
+  lcd.println(">  AXi      >>");
+  lcd.setTextColor(BLACK, WHITE);
+  lcd.display();
 }
 
 void loop()
