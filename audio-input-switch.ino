@@ -7,25 +7,23 @@
 #define BTN_IN_3 4
 #define BTN_IN_4 5
 
-#define CH_SWITCH_1 6
-#define CH_SWITCH_2 7
-#define CH_SWITCH_3 8
-#define CH_SWITCH_4 9
-
 #define CHANNEL_SIZE 4
 #define BTN_PIN_ZERO_OFFSET 2
 #define INPUT_DELAY_MSEC 500
 
-#define LCD_CLK 13
-#define LCD_DIN 12
-#define LCD_DC 11
-#define LCD_CE 10
+#define LCD_CLK 10
+#define LCD_DIN 11
+#define LCD_DC 12
+#define LCD_CE 13
 #define LCD_RST 1
 #define LCD_TEXT_CLEAR_LINE "              "
 #define LCD_CHAR_WIDTH 6
 
+#define MUX_OUT_A 6
+#define MUX_OUT_B 7
+
 const int buttonPins[CHANNEL_SIZE] = {BTN_IN_1, BTN_IN_2, BTN_IN_3, BTN_IN_4};
-const int relayPins[CHANNEL_SIZE] = {CH_SWITCH_1, CH_SWITCH_2, CH_SWITCH_3, CH_SWITCH_4};
+const int muxSelector[CHANNEL_SIZE][2] = {{LOW, LOW}, {HIGH, LOW}, {LOW, HIGH}, {HIGH, HIGH}};
 
 int channelStates[CHANNEL_SIZE];
 unsigned long lastInteractionTime = -1;
@@ -64,13 +62,14 @@ void writeChannelStates(bool reset)
     {
       channelStates[c] = HIGH;
     }
-    digitalWrite(relayPins[c], channelStates[c]);
   }
 }
 
 void toggleChannel(int channel)
 {
   channelStates[channel] = channelStates[channel] == LOW ? HIGH : LOW;
+  digitalWrite(MUX_OUT_A, muxSelector[channel][0]);
+  digitalWrite(MUX_OUT_B, muxSelector[channel][1]);
   writeChannelStates(false);
 }
 
@@ -99,8 +98,10 @@ void setup()
   for (int i = 0; i < CHANNEL_SIZE; i++)
   {
     pinMode(buttonPins[i], INPUT_PULLUP);
-    pinMode(relayPins[i], OUTPUT);
   }
+
+  pinMode(MUX_OUT_A, OUTPUT);
+  pinMode(MUX_OUT_B, OUTPUT);
 
   writeChannelStates(true);
 
