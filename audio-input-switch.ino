@@ -7,27 +7,29 @@
 #define BTN_IN_3 4
 #define BTN_IN_4 5
 
-#define CH_SWITCH_1 6
-#define CH_SWITCH_2 7
-#define CH_SWITCH_3 8
-#define CH_SWITCH_4 9
-
+#define CHANNEL_RESET -9
 #define CHANNEL_SIZE 4
 #define BTN_PIN_ZERO_OFFSET 2
 #define INPUT_DELAY_MSEC 500
 
-#define LCD_CLK 13
-#define LCD_DIN 12
+#define LCD_CLK 9
+#define LCD_DIN 10
 #define LCD_DC 11
-#define LCD_CE 10
-#define LCD_RST 1
+#define LCD_CE 12
+#define LCD_RST 13
 #define LCD_TEXT_CLEAR_LINE "              "
 #define LCD_CHAR_WIDTH 6
 
+#define MUX_OUT_A 6
+#define MUX_OUT_B 7
+#define MUX_INHIBIT 8
+
 const int buttonPins[CHANNEL_SIZE] = {BTN_IN_1, BTN_IN_2, BTN_IN_3, BTN_IN_4};
-const int relayPins[CHANNEL_SIZE] = {CH_SWITCH_1, CH_SWITCH_2, CH_SWITCH_3, CH_SWITCH_4};
+const int muxSelector[CHANNEL_SIZE][2] = {{LOW, LOW}, {HIGH, LOW}, {LOW, HIGH}, {HIGH, HIGH}};
 
 int channelStates[CHANNEL_SIZE];
+int muxInhibitState = HIGH;
+int activeChannel = -1;
 unsigned long lastInteractionTime = -1;
 char txtChannelStatusBuffer[4];
 
@@ -35,43 +37,63 @@ Adafruit_PCD8544 lcd = Adafruit_PCD8544(LCD_CLK, LCD_DIN, LCD_DC, LCD_CE, LCD_RS
 
 void updateDisplay()
 {
+  lcd.fillRect(0, 10, 84, 38, WHITE);
+
+  lcd.setTextSize(1);
+  lcd.setCursor(72, 10);
+  lcd.setTextColor(BLACK);
+  lcd.print(muxInhibitState == HIGH ? "((" : "(X");
+
   lcd.setTextSize(3);
 
   for (int c = 0; c < CHANNEL_SIZE; c++)
   {
     if (channelStates[c] == LOW)
     {
-      lcd.setTextColor(WHITE, BLACK);
+      lcd.fillRect((c * 20) + 1, 21, 21, 27, BLACK);
+      lcd.setTextColor(WHITE);
     }
     else
     {
-      lcd.setTextColor(BLACK, WHITE);
+      lcd.setTextColor(BLACK);
     }
 
     snprintf(txtChannelStatusBuffer, 4, "%d", c + 1);
-    lcd.setCursor((c * 20) + 2, 22);
+    lcd.setCursor((c * 20) + 4, 24);
     lcd.print(txtChannelStatusBuffer);
   }
 
   lcd.display();
 }
 
-void writeChannelStates(bool reset)
+void setActiveChannel(int channel)
 {
-  for (int c = 0; c < CHANNEL_SIZE; c++)
+  if (channel == activeChannel)
   {
-    if (reset)
+    channelStates[channel] = channelStates[channel] == LOW ? HIGH : LOW;
+    muxInhibitState = muxInhibitState == LOW ? HIGH : LOW;
+  }
+  else
+  {
+    muxInhibitState = HIGH;
+    for (int c = 0; c < CHANNEL_SIZE; c++)
     {
       channelStates[c] = HIGH;
     }
-    digitalWrite(relayPins[c], channelStates[c]);
   }
-}
 
-void toggleChannel(int channel)
-{
-  channelStates[channel] = channelStates[channel] == LOW ? HIGH : LOW;
-  writeChannelStates(false);
+  if (channel == CHANNEL_RESET)
+  {
+    digitalWrite(MUX_INHIBIT, HIGH);
+    return;
+  }
+
+  activeChannel = channel;
+  channelStates[channel] = LOW;
+
+  digitalWrite(MUX_INHIBIT, muxInhibitState);
+  digitalWrite(MUX_OUT_A, muxSelector[channel][0]);
+  digitalWrite(MUX_OUT_B, muxSelector[channel][1]);
 }
 
 void checkButton(int btnPin)
@@ -82,7 +104,7 @@ void checkButton(int btnPin)
   if (state == LOW)
   {
     lastInteractionTime = millis();
-    toggleChannel(btnPin - BTN_PIN_ZERO_OFFSET);
+    setActiveChannel(btnPin - BTN_PIN_ZERO_OFFSET);
   }
 }
 
@@ -99,10 +121,14 @@ void setup()
   for (int i = 0; i < CHANNEL_SIZE; i++)
   {
     pinMode(buttonPins[i], INPUT_PULLUP);
-    pinMode(relayPins[i], OUTPUT);
   }
 
-  writeChannelStates(true);
+  pinMode(MUX_OUT_A, OUTPUT);
+  pinMode(MUX_OUT_B, OUTPUT);
+  pinMode(MUX_INHIBIT, OUTPUT);
+
+  setActiveChannel(CHANNEL_RESET);
+  digitalWrite(MUX_INHIBIT, LOW);
 
   lcd.begin();
   lcd.clearDisplay();
