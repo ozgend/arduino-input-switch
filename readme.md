@@ -1,6 +1,13 @@
-# an audio input switch with arduino uno
+# axi - audio input switch with arduino
 
-an audio input switch with arduino uno and 4x1 relay module.
+an audio input switch box project with arduino uno, cd4052b multiplexer and pcd8544 lcd display.
 
-used as 4-to-1 analogue audio input selector or 1-to-4 output switch
 
+## parts used
+- arduino uno
+- pcd8544 / nokia 5110 lcd
+- cd4052b 4x1 multiplexer
+- npn transistor (x2)
+- 1k res (x2)
+- button (x4)
+- 3.5 mm input jack (x5)
