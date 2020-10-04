@@ -11,6 +11,7 @@
 #define CHANNEL_SIZE 4
 #define BTN_PIN_ZERO_OFFSET 2
 #define INPUT_DELAY_MSEC 500
+#define ANIMATION_DELAY_MSEC 250
 
 #define LCD_CLK 9
 #define LCD_DIN 10
@@ -31,7 +32,9 @@ int channelStates[CHANNEL_SIZE];
 int muxInhibitState = HIGH;
 int activeChannel = -1;
 unsigned long lastInteractionTime = -1;
+unsigned long lastAnimationTime = -1;
 char txtChannelStatusBuffer[4];
+int animatedTitleFrame = 0;
 
 Adafruit_PCD8544 lcd = Adafruit_PCD8544(LCD_CLK, LCD_DIN, LCD_DC, LCD_CE, LCD_RST);
 
@@ -116,6 +119,41 @@ void checkInputs()
   }
 }
 
+void animateTitle()
+{
+  if (millis() - lastAnimationTime > ANIMATION_DELAY_MSEC)
+  {
+    lcd.setTextSize(1);
+    lcd.setCursor(0, 0);
+    lcd.setTextColor(WHITE, BLACK);
+
+    switch (animatedTitleFrame)
+    {
+    case 0:
+      lcd.println(" AXi  >>      ");
+      break;
+    case 1:
+      lcd.println(" AXi     >>   ");
+      break;
+    case 2:
+      lcd.println(" AXi        >>");
+      break;
+    }
+
+    lcd.setTextColor(BLACK, WHITE);
+    lcd.display();
+
+    animatedTitleFrame++;
+
+    if (animatedTitleFrame == 3)
+    {
+      animatedTitleFrame = 0;
+    }
+
+    lastAnimationTime = millis();
+  }
+}
+
 void setup()
 {
   for (int i = 0; i < CHANNEL_SIZE; i++)
@@ -146,12 +184,8 @@ void setup()
   delay(1000);
 
   lcd.clearDisplay();
-  lcd.setTextSize(1);
-  lcd.setCursor(0, 0);
-  lcd.setTextColor(WHITE, BLACK);
-  lcd.println(">  AXi      >>");
-  lcd.setTextColor(BLACK, WHITE);
-  lcd.display();
+
+  animateTitle();
 }
 
 void loop()
@@ -160,5 +194,6 @@ void loop()
   {
     checkInputs();
     updateDisplay();
+    animateTitle();
   }
 }
