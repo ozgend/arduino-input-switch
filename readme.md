@@ -11,3 +11,7 @@ an audio input switch box project with arduino uno, cd4052b multiplexer and pcd8
 - 1k res (x2)
 - button (x4)
 - 3.5 mm input jack (x5)
+
+
+## todo
+- add bt v5.0 audio gateway
