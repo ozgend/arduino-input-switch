@@ -21,11 +21,14 @@
 
 #define MUX_OUT_A 6
 #define MUX_OUT_B 7
+#define MUX_INHIBIT 8
 
 const int buttonPins[CHANNEL_SIZE] = {BTN_IN_1, BTN_IN_2, BTN_IN_3, BTN_IN_4};
 const int muxSelector[CHANNEL_SIZE][2] = {{LOW, LOW}, {HIGH, LOW}, {LOW, HIGH}, {HIGH, HIGH}};
 
 int channelStates[CHANNEL_SIZE];
+int muxInhibitState = LOW;
+int activeChannel = -1;
 unsigned long lastInteractionTime = -1;
 char txtChannelStatusBuffer[4];
 
@@ -54,23 +57,34 @@ void updateDisplay()
   lcd.display();
 }
 
-void writeChannelStates(bool reset)
+void setActiveChannel(int channel)
 {
-  for (int c = 0; c < CHANNEL_SIZE; c++)
+  if (channel == activeChannel)
   {
-    if (reset)
+    channelStates[channel] = channelStates[channel] == LOW ? HIGH : LOW;
+    muxInhibitState = muxInhibitState == LOW ? HIGH : LOW;
+  }
+  else
+  {
+    muxInhibitState = HIGH;
+    for (int c = 0; c < CHANNEL_SIZE; c++)
     {
       channelStates[c] = HIGH;
     }
   }
-}
 
-void toggleChannel(int channel)
-{
-  channelStates[channel] = channelStates[channel] == LOW ? HIGH : LOW;
+  if (channel == CHANNEL_RESET)
+  {
+    digitalWrite(MUX_INHIBIT, HIGH);
+    return;
+  }
+
+  activeChannel = channel;
+  channelStates[channel] = LOW;
+
+  digitalWrite(MUX_INHIBIT, muxInhibitState);
   digitalWrite(MUX_OUT_A, muxSelector[channel][0]);
   digitalWrite(MUX_OUT_B, muxSelector[channel][1]);
-  writeChannelStates(false);
 }
 
 void checkButton(int btnPin)
@@ -81,7 +95,7 @@ void checkButton(int btnPin)
   if (state == LOW)
   {
     lastInteractionTime = millis();
-    toggleChannel(btnPin - BTN_PIN_ZERO_OFFSET);
+    setActiveChannel(btnPin - BTN_PIN_ZERO_OFFSET);
   }
 }
 
@@ -102,8 +116,9 @@ void setup()
 
   pinMode(MUX_OUT_A, OUTPUT);
   pinMode(MUX_OUT_B, OUTPUT);
+  pinMode(MUX_INHIBIT, OUTPUT);
 
-  writeChannelStates(true);
+  setActiveChannel(CHANNEL_RESET);
 
   lcd.begin();
   lcd.clearDisplay();
