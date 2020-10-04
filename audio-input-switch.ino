@@ -7,15 +7,16 @@
 #define BTN_IN_3 4
 #define BTN_IN_4 5
 
+#define CHANNEL_RESET -9
 #define CHANNEL_SIZE 4
 #define BTN_PIN_ZERO_OFFSET 2
 #define INPUT_DELAY_MSEC 500
 
-#define LCD_CLK 10
-#define LCD_DIN 11
-#define LCD_DC 12
-#define LCD_CE 13
-#define LCD_RST 1
+#define LCD_CLK 9
+#define LCD_DIN 10
+#define LCD_DC 11
+#define LCD_CE 12
+#define LCD_RST 13
 #define LCD_TEXT_CLEAR_LINE "              "
 #define LCD_CHAR_WIDTH 6
 
@@ -27,7 +28,7 @@ const int buttonPins[CHANNEL_SIZE] = {BTN_IN_1, BTN_IN_2, BTN_IN_3, BTN_IN_4};
 const int muxSelector[CHANNEL_SIZE][2] = {{LOW, LOW}, {HIGH, LOW}, {LOW, HIGH}, {HIGH, HIGH}};
 
 int channelStates[CHANNEL_SIZE];
-int muxInhibitState = LOW;
+int muxInhibitState = HIGH;
 int activeChannel = -1;
 unsigned long lastInteractionTime = -1;
 char txtChannelStatusBuffer[4];
@@ -36,21 +37,29 @@ Adafruit_PCD8544 lcd = Adafruit_PCD8544(LCD_CLK, LCD_DIN, LCD_DC, LCD_CE, LCD_RS
 
 void updateDisplay()
 {
+  lcd.fillRect(0, 10, 84, 38, WHITE);
+
+  lcd.setTextSize(1);
+  lcd.setCursor(72, 10);
+  lcd.setTextColor(BLACK);
+  lcd.print(muxInhibitState == HIGH ? "((" : "(X");
+
   lcd.setTextSize(3);
 
   for (int c = 0; c < CHANNEL_SIZE; c++)
   {
     if (channelStates[c] == LOW)
     {
-      lcd.setTextColor(WHITE, BLACK);
+      lcd.fillRect((c * 20) + 1, 21, 21, 27, BLACK);
+      lcd.setTextColor(WHITE);
     }
     else
     {
-      lcd.setTextColor(BLACK, WHITE);
+      lcd.setTextColor(BLACK);
     }
 
     snprintf(txtChannelStatusBuffer, 4, "%d", c + 1);
-    lcd.setCursor((c * 20) + 2, 22);
+    lcd.setCursor((c * 20) + 4, 24);
     lcd.print(txtChannelStatusBuffer);
   }
 
@@ -119,6 +128,7 @@ void setup()
   pinMode(MUX_INHIBIT, OUTPUT);
 
   setActiveChannel(CHANNEL_RESET);
+  digitalWrite(MUX_INHIBIT, LOW);
 
   lcd.begin();
   lcd.clearDisplay();
